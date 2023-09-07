@@ -57,7 +57,7 @@ void ManagerTest::test_appendDevice()
     mm_manager.addGatewayDevice("192.168.1.3");
 
     // whait release queue
-    std::this_thread::sleep_for(std::chrono::seconds(15));
+    std::this_thread::sleep_for(std::chrono::seconds(10));
 }
 
 void ManagerTest::test_sendMessage()
@@ -65,6 +65,9 @@ void ManagerTest::test_sendMessage()
     mm_manager.sendMessage("+375291111111", "ASDASDASDASDASDASDASDASD");
     mm_manager.sendMessage("+375293333333", "ячсячсячсячсячсячсячсячс");
     mm_manager.sendMessage("+375294444444", "123123123123123123123123");
+
+    // whait send
+    std::this_thread::sleep_for(std::chrono::seconds(5));
 }
 
 QTEST_APPLESS_MAIN(ManagerTest)

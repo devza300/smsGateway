@@ -81,34 +81,36 @@ bool Manager::isDeviceActive(const QString &ip)
 
 void smsGateway::Manager::dequeueMessage(const QString &reason)
 {
-    auto data = mm_queueSend.dequeue();
+    std::pair<QString, QString> data;
+    // удаление блокировки после получения данных, т.к. она будет выполняться на время сна потока
+    {
+        std::unique_lock queueLock(mm_mutextQueue);
+        data = mm_queueSend.dequeue();
+    }
 
     // TODO XMLHttpRequest to sendMsg
     // demo - sleep
-    std::uniform_int_distribution dist(2, 3);
+    std::uniform_int_distribution dist(0, 1);
     int seconds = dist(*QRandomGenerator::global());
     std::this_thread::sleep_for(std::chrono::seconds(seconds));
 
     THREAD_DEBUG << reason << " : " << data.first << " <- " << data.second;
 }
 
-bool Manager::sendIfQueueNotEmpty()
+bool Manager::isQueueEmpty()
 {
     std::unique_lock queueLock(mm_mutextQueue);
-
-    if (mm_queueSend.isEmpty())
-        return false;
-
-    // в очереди есть данные для отправки
-    dequeueMessage("sending data by queue");
-
     return mm_queueSend.isEmpty();
 }
 
 void Manager::waitAndSend()
 {
-    std::unique_lock queueLock(mm_mutextQueue);
-    mm_queueNotEmpty.wait(queueLock, [&] () { return !mm_queueSend.isEmpty() || !mm_isRunning; });
+    // разблокировать mutex после сигнала для отправки сообщений
+    {
+        THREAD_DEBUG << "wait notify_all()";
+        std::unique_lock queueLock(mm_mutextQueue);
+        mm_queueNotEmpty.wait(queueLock, [&] () { return !mm_queueSend.isEmpty() || !mm_isRunning; });
+    }
 
     if (!mm_isRunning)
         return;
@@ -127,8 +129,12 @@ void Manager::createDeviceLoop(const QString &ip)
     while (mm_isRunning && isDeviceActive(ip))
     {
         // если в очереди есть данные - выполнить обработку
-        if (!sendIfQueueNotEmpty())
+        if (!isQueueEmpty())
+        {
+            // в очереди есть данные для отправки
+            dequeueMessage("sending data by queue");
             continue;
+        }
 
         // ожидание сигнала появления данных для отправки
         waitAndSend();

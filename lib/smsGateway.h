@@ -67,10 +67,10 @@ private:
     void dequeueMessage(const QString &reason);
 
     /*!
-     * \brief sendIfQueueNotEmpty - отправить сообщение, если есть данные для отправки
+     * \brief isQueueEmpty - проверка наличия сообщений в очереди на отправку
      * \return - признак окончания очереди
      */
-    bool sendIfQueueNotEmpty();
+    bool isQueueEmpty();
 
     /*!
      * \brief waitAndSend - ожидание данных для отправки
